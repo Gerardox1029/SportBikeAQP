@@ -18,14 +18,6 @@ app.use('/api', apiRoutes);
 // Servir frontend estático
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-
-// ✅ SOLUCIÓN 1: Sintaxis correcta para Express moderno
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-  // Nota: Ajusta la ruta de arriba a donde esté tu index.html compilado
-});
-
 // Manejo de errores global simple
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -48,3 +40,17 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`Servidor corriendo (SIN DB) en puerto ${PORT}`);
     });
   });
+
+
+
+const path = require('path');
+
+// 1. Indicarle a Express dónde están los archivos estáticos (CSS, JS, imágenes) del Frontend
+// En entornos de producción con Docker, la carpeta 'dist' del frontend suele copiarse al lado del servidor
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// 2. LA SOLUCIÓN AL ERROR ANTERIOR: Capturar cualquier ruta del navegador usando RegEx pura
+app.get(/^\/(.*)$/, (req, res) => {
+  // Esto le dice a Express: "Si alguien pide cualquier página, respóndele con el index.html del Frontend"
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});
