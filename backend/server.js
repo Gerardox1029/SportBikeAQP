@@ -17,8 +17,13 @@ app.use('/api', apiRoutes);
 
 // Servir frontend estático
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+
+
+// ✅ SOLUCIÓN 1: Sintaxis correcta para Express moderno
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  // Nota: Ajusta la ruta de arriba a donde esté tu index.html compilado
 });
 
 // Manejo de errores global simple
