@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 const apiRoutes = require('./routes/api');
 
 const app = express();
@@ -13,6 +14,12 @@ app.use(express.json()); // Parsea JSON en el body
 
 // Rutas
 app.use('/api', apiRoutes);
+
+// Servir frontend estático
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Manejo de errores global simple
 app.use((err, req, res, next) => {
