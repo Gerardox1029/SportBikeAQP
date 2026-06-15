@@ -7,17 +7,33 @@ const Registro = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (dni.length < 8 || nombres.length < 3) {
       alert("Por favor ingrese un DNI válido y sus nombres completos.");
       return;
     }
 
-    // Animación y éxito (Mock)
-    setIsSubscribed(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 3000);
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dni, nombre: nombres })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Error al registrar.");
+        return;
+      }
+
+      setIsSubscribed(true);
+    } catch (error) {
+      console.error(error);
+      alert("Error de red al conectar con el servidor.");
+    }
   };
 
   if (isSubscribed) {
@@ -26,7 +42,7 @@ const Registro = () => {
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
         <h2 style={{ color: 'var(--primary-gold)' }}>¡Ya eres ClientePuntos!</h2>
         <p>Te regalamos 10 puntos de bienvenida.</p>
-        <p className="mt-1" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Redirigiendo al inicio...</p>
+        <button className="btn-primary mt-2" onClick={() => navigate('/')}>OK</button>
       </div>
     );
   }

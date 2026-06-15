@@ -22,6 +22,7 @@ router.post('/users', async (req, res) => {
     });
     
     await newUser.save();
+    console.log(`[Registro Puntos] Nuevo usuario registrado exitosamente: ${nombre} (DNI: ${dni})`);
     res.status(201).json(newUser);
   } catch (error) {
     res.status(500).json({ error: 'Error registrando usuario.' });
@@ -117,6 +118,7 @@ router.post('/reservations', async (req, res) => {
     });
     
     await newReservation.save();
+    console.log(`[Reserva] Nueva reserva creada para ${nombre_temporal} el ${fecha} de ${hora_inicio} a ${hora_fin}`);
     res.status(201).json(newReservation);
   } catch (error) {
     res.status(500).json({ error: 'Error creando reserva.' });

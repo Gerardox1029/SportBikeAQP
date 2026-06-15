@@ -43,11 +43,11 @@ mongoose.connect(process.env.MONGODB_URI)
 
 
 // 1. Indicarle a Express dónde están los archivos estáticos (CSS, JS, imágenes) del Frontend
-// En entornos de producción con Docker, la carpeta 'dist' del frontend suele copiarse al lado del servidor
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// En entornos de producción con Docker, la carpeta 'dist' del frontend suele copiarse al lado del servidor (en este caso, 'public' como dice el Dockerfile)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 2. LA SOLUCIÓN AL ERROR ANTERIOR: Capturar cualquier ruta del navegador usando RegEx pura
 app.get(/^\/(.*)$/, (req, res) => {
   // Esto le dice a Express: "Si alguien pide cualquier página, respóndele con el index.html del Frontend"
-  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

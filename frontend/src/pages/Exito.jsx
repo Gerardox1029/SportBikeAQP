@@ -6,12 +6,6 @@ const Exito = () => {
   const { reservationData } = useContext(ReservationContext);
   const navigate = useNavigate();
 
-  const handleDownload = () => {
-    // Implementar lógica de descarga de imagen si es necesario, 
-    // por ahora solo un alert.
-    alert('Descargando boleta como imagen...');
-  };
-
   return (
     <div className="flex-col-center animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
       <div className="check-container">
@@ -35,9 +29,6 @@ const Exito = () => {
 
       <div className="mt-2" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <button className="btn-primary" onClick={() => navigate('/')}>Volver al Inicio</button>
-        <button className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--primary-gold)', color: 'var(--primary-gold)' }} onClick={handleDownload}>
-          Guardar como imagen
-        </button>
       </div>
     </div>
   );
