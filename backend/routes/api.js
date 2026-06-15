@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Reservation = require('../models/Reservation');
+const BlockedDay = require('../models/BlockedDay');
 
 // --- USER ROUTES ---
 
@@ -139,6 +140,25 @@ router.get('/reservations', async (req, res) => {
   }
 });
 
+// Get reservation counts between two dates
+router.get('/reservations/counts', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = {
+      fecha: { $gte: startDate, $lte: endDate }
+    };
+    const reservations = await Reservation.find(query);
+    
+    const counts = {};
+    reservations.forEach(r => {
+      counts[r.fecha] = (counts[r.fecha] || 0) + 1;
+    });
+    res.json(counts);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo conteos.' });
+  }
+});
+
 // Delete reservation
 router.delete('/reservations/:id', async (req, res) => {
   try {
@@ -147,6 +167,59 @@ router.delete('/reservations/:id', async (req, res) => {
     res.json({ message: 'Reserva eliminada correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error eliminando reserva.' });
+  }
+});
+
+// Edit reservation
+router.put('/reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, hora_inicio, hora_fin, duracion_minutos } = req.body;
+    const updated = await Reservation.findByIdAndUpdate(id, {
+      fecha, hora_inicio, hora_fin, duracion_minutos
+    }, { new: true });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Error editando reserva.' });
+  }
+});
+
+// --- BLOCKED DAYS ROUTES ---
+
+// Get blocked days between dates
+router.get('/blocked-days', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = {
+      fecha: { $gte: startDate, $lte: endDate }
+    };
+    const blockedDays = await BlockedDay.find(query);
+    res.json(blockedDays);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo días bloqueados.' });
+  }
+});
+
+// Block a day
+router.post('/blocked-days', async (req, res) => {
+  try {
+    const { fecha } = req.body;
+    const newBlocked = new BlockedDay({ fecha });
+    await newBlocked.save();
+    res.status(201).json(newBlocked);
+  } catch (error) {
+    res.status(500).json({ error: 'Error bloqueando día.' });
+  }
+});
+
+// Unblock a day
+router.delete('/blocked-days/:fecha', async (req, res) => {
+  try {
+    const { fecha } = req.params;
+    await BlockedDay.findOneAndDelete({ fecha });
+    res.json({ message: 'Día desbloqueado.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error desbloqueando día.' });
   }
 });
 

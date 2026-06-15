@@ -5,7 +5,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('puntos'); // puntos, agenda
   const [searchDni, setSearchDni] = useState('');
-  const [modalType, setModalType] = useState(null); // 'use', 'add', null
+  const [modalType, setModalType] = useState(null); // 'use', 'add', 'editRes', null
   const [selectedUser, setSelectedUser] = useState(null);
   const [addAmount, setAddAmount] = useState('');
   
@@ -13,8 +13,19 @@ const Admin = () => {
   const [users, setUsers] = useState([]);
   const [reservations, setReservations] = useState([]);
   
-  // Agenda Date Filter
+  // Agenda Date Filter (Weekly selector logic)
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [days, setDays] = useState([]);
+  const [monthName, setMonthName] = useState('');
   const [agendaDate, setAgendaDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Counts & Blocked Days for Agenda
+  const [reservationCounts, setReservationCounts] = useState({});
+  const [blockedDays, setBlockedDays] = useState([]);
+
+  // For Edit Reservation
+  const [selectedRes, setSelectedRes] = useState(null);
+  const [editResForm, setEditResForm] = useState({ hora_inicio: '', hora_fin: '', duracion_minutos: '' });
 
   // Fetch Users
   const fetchUsers = async () => {
@@ -27,7 +38,24 @@ const Admin = () => {
     }
   };
 
-  // Fetch Reservations
+  // Fetch Status for Week Selector
+  const fetchStatus = async () => {
+    try {
+      const today = new Date();
+      const startStr = today.toISOString().split('T')[0];
+      const end = new Date();
+      end.setDate(end.getDate() + 30);
+      const endStr = end.toISOString().split('T')[0];
+
+      const countRes = await fetch(`/api/reservations/counts?startDate=${startStr}&endDate=${endStr}`);
+      if (countRes.ok) setReservationCounts(await countRes.json());
+
+      const blockRes = await fetch(`/api/blocked-days?startDate=${startStr}&endDate=${endStr}`);
+      if (blockRes.ok) setBlockedDays((await blockRes.json()).map(b => b.fecha));
+    } catch (e) { console.error(e); }
+  };
+
+  // Fetch Reservations for selected date
   const fetchReservations = async (date) => {
     try {
       const res = await fetch(`/api/reservations?fecha=${date}`);
@@ -42,9 +70,53 @@ const Admin = () => {
     if (activeTab === 'puntos') {
       fetchUsers();
     } else if (activeTab === 'agenda') {
+      fetchStatus();
       fetchReservations(agendaDate);
     }
   }, [activeTab, agendaDate]);
+
+  // Generar días de la semana
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dayOfWeek = today.getDay();
+    const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    
+    const monday = new Date(today);
+    monday.setDate(diffToMonday + (currentWeekOffset * 7));
+    
+    const weekDays = [];
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    let currentMonth = '';
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      if (i === 0 || i === 6) currentMonth = monthNames[date.getMonth()];
+
+      const isPast = date < today;
+      const isToday = date.getTime() === today.getTime();
+      const fullDateStr = date.toISOString().split('T')[0];
+      
+      const isBlocked = blockedDays.includes(fullDateStr);
+      const resCount = reservationCounts[fullDateStr] || 0;
+      
+      let statusClass = 'gray'; // past
+      if (!isPast) {
+        if (isBlocked || resCount >= 4) statusClass = 'red';
+        else if (resCount >= 2) statusClass = 'yellow';
+        else statusClass = 'green';
+      }
+
+      weekDays.push({
+        date: date, dayNum: date.getDate(), label: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][i],
+        isPast, isToday, statusClass, fullDateStr,
+        isSelected: fullDateStr === agendaDate
+      });
+    }
+    setDays(weekDays);
+    setMonthName(currentMonth);
+  }, [currentWeekOffset, reservationCounts, blockedDays, agendaDate]);
 
   const filteredUsers = searchDni ? users.filter(u => u.dni.includes(searchDni)) : users;
 
@@ -53,14 +125,14 @@ const Admin = () => {
     setModalType(type);
   };
 
-  const executeAction = async () => {
+  const executePointAction = async () => {
     let actionType = modalType;
     let amount = 0;
 
     if (modalType === 'use') {
       amount = selectedUser.puntos; // use all points
     } else if (modalType === 'add') {
-      amount = parseFloat(addAmount) * 0.01; // Fórmula real
+      amount = parseFloat(addAmount) * 0.01; 
       if (isNaN(amount) || amount <= 0) {
         alert("Ingrese un monto válido");
         return;
@@ -79,13 +151,11 @@ const Admin = () => {
         setUsers(users.map(u => u._id === updatedUser._id ? updatedUser : u));
         
         if (actionType === 'use') {
-          alert(`Puntos canjeados. Descuento de S/.${(amount * 100).toFixed(2)} aplicado.`);
+          alert(`Puntos canjeados. Descuento de S/.${(amount).toFixed(2)} aplicado.`);
         } else {
           alert(`+${amount.toFixed(2)} puntos añadidos a ${selectedUser.nombre}`);
         }
-      } else {
-        alert("Error al actualizar puntos.");
-      }
+      } else alert("Error al actualizar puntos.");
     } catch (e) {
       console.error(e);
       alert("Error de red.");
@@ -95,8 +165,51 @@ const Admin = () => {
     setAddAmount('');
   };
 
+  const toggleBlockedDay = async () => {
+    const isBlocked = blockedDays.includes(agendaDate);
+    try {
+      if (isBlocked) {
+        await fetch(`/api/blocked-days/${agendaDate}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/blocked-days', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fecha: agendaDate })
+        });
+      }
+      fetchStatus();
+    } catch(e) { console.error(e); }
+  };
+
+  const deleteReservation = async (id) => {
+    if(!window.confirm("¿Seguro que deseas eliminar esta reserva?")) return;
+    try {
+      await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
+      fetchReservations(agendaDate);
+      fetchStatus();
+    } catch(e) { console.error(e); }
+  };
+
+  const handleEditRes = (res) => {
+    setSelectedRes(res);
+    setEditResForm({ hora_inicio: res.hora_inicio, hora_fin: res.hora_fin, duracion_minutos: res.duracion_minutos });
+    setModalType('editRes');
+  };
+
+  const saveEditRes = async () => {
+    try {
+      await fetch(`/api/reservations/${selectedRes._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha: selectedRes.fecha, ...editResForm })
+      });
+      setModalType(null);
+      fetchReservations(agendaDate);
+    } catch(e) { console.error(e); }
+  };
+
   return (
-    <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', paddingTop: '60px' }}>
+    <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', paddingTop: '60px', paddingBottom: '40px' }}>
       {/* Topbar */}
       <div className="admin-topbar">
         <button onClick={() => navigate('/')} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -156,23 +269,65 @@ const Admin = () => {
       {activeTab === 'agenda' && (
         <div className="animate-fade-in" style={{ padding: '20px' }}>
           
-          <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-color)', padding: '10px 15px', borderRadius: '10px' }}>
-            <span style={{ fontWeight: 'bold', color: 'var(--primary-gold)' }}>Página Día:</span>
-            <input 
-              type="date" 
-              className="input-field" 
-              style={{ margin: 0, width: 'auto', padding: '5px 10px', background: 'transparent' }}
-              value={agendaDate}
-              onChange={(e) => setAgendaDate(e.target.value)}
-            />
+          {/* Day Selector */}
+          <div className="week-container" style={{ margin: '0 auto 20px', maxWidth: '100%' }}>
+            <div className="week-header">
+              <button 
+                onClick={() => { if(currentWeekOffset > 0) setCurrentWeekOffset(p => p - 1) }} 
+                disabled={currentWeekOffset === 0}
+                style={{ background: 'transparent', border: 'none', color: currentWeekOffset === 0 ? 'var(--surface-border)' : 'var(--primary-gold)', cursor: 'pointer', fontSize: '1.2rem' }}
+              >
+                &#9664;
+              </button>
+              <div style={{ fontWeight: '600' }}>{currentWeekOffset === 0 ? `Esta semana ${monthName}` : `Semana +${currentWeekOffset} ${monthName}`}</div>
+              <button 
+                onClick={() => { if(currentWeekOffset < 3) setCurrentWeekOffset(p => p + 1) }} 
+                disabled={currentWeekOffset === 3}
+                style={{ background: 'transparent', border: 'none', color: currentWeekOffset === 3 ? 'var(--surface-border)' : 'var(--primary-gold)', cursor: 'pointer', fontSize: '1.2rem' }}
+              >
+                &#9654;
+              </button>
+            </div>
+
+            <div className="days-row">
+              {days.map((day, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className="day-label">{day.label}</div>
+                  <div 
+                    className={`day-circle ${day.statusClass} ${day.isSelected ? 'active' : ''} ${day.isPast ? 'disabled' : ''}`}
+                    onClick={() => { if(!day.isPast) setAgendaDate(day.fullDateStr) }}
+                  >
+                    {day.dayNum}
+                    {day.isToday && <span className="tag-hoy">Hoy</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Reservas del día</div>
+            <button 
+              className="btn-primary" 
+              style={{ width: 'auto', padding: '8px 16px', fontSize: '0.9rem', background: blockedDays.includes(agendaDate) ? 'transparent' : 'var(--status-red)', border: blockedDays.includes(agendaDate) ? '1px solid var(--status-red)' : 'none', color: blockedDays.includes(agendaDate) ? 'var(--status-red)' : 'white' }}
+              onClick={toggleBlockedDay}
+            >
+              {blockedDays.includes(agendaDate) ? 'Desmarcar Full' : 'Marcar Full'}
+            </button>
           </div>
           
           <div style={{ position: 'relative', borderLeft: '2px solid var(--surface-border)', marginLeft: '20px', paddingLeft: '20px' }}>
             {reservations.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No hay reservas para este día.</div>}
             {reservations.map(res => (
-              <div key={res._id} style={{ marginBottom: '20px', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--primary-gold)', padding: '15px', borderRadius: '8px', position: 'relative' }}>
+              <div key={res._id} style={{ marginBottom: '20px', background: 'rgba(230, 57, 70, 0.1)', border: '1px solid var(--primary-gold)', padding: '15px', borderRadius: '8px', position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-26px', top: '20px', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary-gold)' }}></div>
-                <div style={{ fontWeight: 'bold' }}>{res.hora_inicio} - {res.hora_fin}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontWeight: 'bold' }}>{res.hora_inicio} - {res.hora_fin}</div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => handleEditRes(res)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => deleteReservation(res._id)} style={{ background: 'transparent', border: 'none', color: 'var(--status-red)', cursor: 'pointer' }}>❌</button>
+                  </div>
+                </div>
                 <div style={{ fontSize: '1.1rem', marginTop: '5px' }}>{res.nombre_temporal}</div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{res.servicio} ({res.duracion_minutos} min)</div>
               </div>
@@ -189,7 +344,7 @@ const Admin = () => {
             {modalType === 'use' && (
               <>
                 <h3 style={{ marginBottom: '15px' }}>Confirmar Canje</h3>
-                <p>¿Está seguro que quiere usar TODOS los puntos equivalentes a <strong>S/. {(selectedUser.puntos * 100).toFixed(2)}</strong> de descuento?</p>
+                <p>¿Está seguro que quiere usar TODOS los puntos equivalentes a <strong>S/. {(selectedUser.puntos).toFixed(2)}</strong> de descuento?</p>
               </>
             )}
 
@@ -210,9 +365,39 @@ const Admin = () => {
               </>
             )}
 
+            {modalType === 'editRes' && (
+              <>
+                <h3 style={{ marginBottom: '15px' }}>Editar Reserva</h3>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora de Inicio</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={editResForm.hora_inicio}
+                  onChange={(e) => setEditResForm({...editResForm, hora_inicio: e.target.value})}
+                  style={{ width: '100%', marginBottom: '10px' }}
+                />
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora de Fin</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={editResForm.hora_fin}
+                  onChange={(e) => setEditResForm({...editResForm, hora_fin: e.target.value})}
+                  style={{ width: '100%', marginBottom: '10px' }}
+                />
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Duración (minutos)</label>
+                <input 
+                  type="number" 
+                  className="input-field" 
+                  value={editResForm.duracion_minutos}
+                  onChange={(e) => setEditResForm({...editResForm, duracion_minutos: e.target.value})}
+                  style={{ width: '100%' }}
+                />
+              </>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-main)' }} onClick={() => setModalType(null)}>Cancelar</button>
-              <button className="btn-primary" onClick={executeAction}>Confirmar</button>
+              <button className="btn-primary" onClick={modalType === 'editRes' ? saveEditRes : executePointAction}>Guardar</button>
             </div>
           </div>
         </div>

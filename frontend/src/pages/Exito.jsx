@@ -22,8 +22,8 @@ const Exito = () => {
         <p><strong>Fecha:</strong> {reservationData.fecha}</p>
         <p><strong>Hora:</strong> {reservationData.hora_inicio} - {reservationData.hora_fin}</p>
         <p className="mt-1">
-          <strong>Dirección:</strong><br/>
-          <a href="https://maps.google.com" target="_blank" rel="noreferrer" className="link-gold">Ver en Google Maps</a>
+          <strong>Dirección:</strong><br />
+          <a href="https://maps.app.goo.gl/8NWbvcTbDFPnerEd7" target="_blank" rel="noreferrer" className="link-gold">Ver en Google Maps</a>
         </p>
       </div>
 

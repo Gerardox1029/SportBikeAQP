@@ -9,6 +9,37 @@ const Dia = () => {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [days, setDays] = useState([]);
   const [monthName, setMonthName] = useState('');
+  
+  const [reservationCounts, setReservationCounts] = useState({});
+  const [blockedDays, setBlockedDays] = useState([]);
+
+  // Fetch counts and blocked days
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const today = new Date();
+        const startStr = today.toISOString().split('T')[0];
+        
+        const end = new Date();
+        end.setDate(end.getDate() + 30);
+        const endStr = end.toISOString().split('T')[0];
+
+        // Fetch counts
+        const countRes = await fetch(`/api/reservations/counts?startDate=${startStr}&endDate=${endStr}`);
+        const countData = await countRes.json();
+        if (countRes.ok) setReservationCounts(countData);
+
+        // Fetch blocked days
+        const blockRes = await fetch(`/api/blocked-days?startDate=${startStr}&endDate=${endStr}`);
+        const blockData = await blockRes.json();
+        if (blockRes.ok) setBlockedDays(blockData.map(b => b.fecha));
+
+      } catch (error) {
+        console.error("Error fetching dates status", error);
+      }
+    };
+    fetchStatus();
+  }, []);
 
   // Generar días de la semana
   useEffect(() => {
@@ -37,16 +68,22 @@ const Dia = () => {
 
       const isPast = date < today;
       const isToday = date.getTime() === today.getTime();
+      const fullDateStr = date.toISOString().split('T')[0];
       
-      // Mock occupation (random for demo purposes, in real app fetch from backend)
-      // 0 = green, 1 = yellow, 2 = red
-      const mockStatus = isPast ? -1 : Math.floor(Math.random() * 3); 
+      const isBlocked = blockedDays.includes(fullDateStr);
+      const resCount = reservationCounts[fullDateStr] || 0;
       
       let statusClass = 'gray'; // past
       if (!isPast) {
-        if (mockStatus === 0) statusClass = 'green';
-        else if (mockStatus === 1) statusClass = 'yellow';
-        else statusClass = 'red'; // full
+        if (isBlocked) {
+          statusClass = 'red';
+        } else if (resCount >= 4) {
+          statusClass = 'red';
+        } else if (resCount >= 2) {
+          statusClass = 'yellow';
+        } else {
+          statusClass = 'green';
+        }
       }
 
       weekDays.push({
@@ -56,14 +93,14 @@ const Dia = () => {
         isPast,
         isToday,
         statusClass,
-        fullDateStr: date.toISOString().split('T')[0]
+        fullDateStr
       });
     }
 
     setDays(weekDays);
     setMonthName(currentMonth);
 
-  }, [currentWeekOffset]);
+  }, [currentWeekOffset, reservationCounts, blockedDays]);
 
   const handleNextWeek = () => {
     if (currentWeekOffset < 3) setCurrentWeekOffset(prev => prev + 1);
@@ -92,7 +129,7 @@ const Dia = () => {
           >
             &#9664;
           </button>
-          <div style={{ fontWeight: '600' }}>{currentWeekOffset === 0 ? 'Esta semana' : `Semana +${currentWeekOffset}`} - {monthName}</div>
+          <div style={{ fontWeight: '600' }}>{currentWeekOffset === 0 ? `Esta semana ${monthName}` : `Semana +${currentWeekOffset} ${monthName}`}</div>
           <button 
             onClick={handleNextWeek} 
             disabled={currentWeekOffset === 3}

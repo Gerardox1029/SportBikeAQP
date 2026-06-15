@@ -26,9 +26,23 @@ const Hora = () => {
     return `${hour12}:${minStr} ${ampm}`;
   };
 
-  const isTimeAllowed = (h) => {
+  const isTimeAllowed = (h, m) => {
     // 8 AM (8) to 12 PM (12) and 1 PM (13) to 5 PM (17)
-    return (h >= 8 && h <= 12) || (h >= 13 && h <= 17);
+    const withinRange = (h >= 8 && h <= 12) || (h >= 13 && h <= 17);
+    if (!withinRange) return false;
+
+    // Si es hoy, validar que la hora no haya pasado
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (reservationData.fecha === todayStr) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      
+      if (h < currentHour) return false;
+      if (h === currentHour && m <= currentMin) return false;
+    }
+    
+    return true;
   };
 
   const isTimeOccupied = (h, m) => {
@@ -78,7 +92,7 @@ const Hora = () => {
     let hour24 = hour12;
     if (hour12 >= 1 && hour12 <= 5) hour24 += 12; // PM times
     
-    if (isTimeAllowed(hour24) && !isTimeOccupied(hour24, minute)) {
+    if (isTimeAllowed(hour24, minute) && !isTimeOccupied(hour24, minute)) {
       setSelectedTime({
         h: hour24,
         m: minute,
@@ -149,7 +163,7 @@ const Hora = () => {
       let h24 = i;
       if (i >= 1 && i <= 5) h24 += 12;
       
-      const allowed = isTimeAllowed(h24);
+      const allowed = isTimeAllowed(h24, 0);
       
       numbers.push(
         <text 
