@@ -42,9 +42,6 @@ mongoose.connect(process.env.MONGODB_URI)
   });
 
 
-
-const path = require('path');
-
 // 1. Indicarle a Express dónde están los archivos estáticos (CSS, JS, imágenes) del Frontend
 // En entornos de producción con Docker, la carpeta 'dist' del frontend suele copiarse al lado del servidor
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
