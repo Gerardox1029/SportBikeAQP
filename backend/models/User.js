@@ -12,6 +12,23 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  telefono: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  codigoPais: {
+    type: String,
+    default: '+51'
+  },
+  codigoVerificacion: {
+    type: String,
+    default: null
+  },
+  verificado: {
+    type: Boolean,
+    default: false
+  },
   puntos: {
     type: Number,
     default: 0
