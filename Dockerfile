@@ -20,6 +20,7 @@ COPY backend/package*.json ./
 
 # Instalar únicamente dependencias de producción
 RUN npm install --omit=dev
+RUN npm install jsonwebtoken
 
 # Copiar el resto del código del backend
 COPY backend/ ./
