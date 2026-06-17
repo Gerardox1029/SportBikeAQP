@@ -1,20 +1,22 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ReservationContext } from '../context/ReservationContext';
+import { useModal } from '../context/ModalContext';
 
 const Home = () => {
   const [nombre, setNombre] = useState('');
   const { updateData } = useContext(ReservationContext);
+  const { showAlert } = useModal();
   const navigate = useNavigate();
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (nombre.toLowerCase() === 'timsum') {
       navigate('/admin');
       return;
     }
     
     if (nombre.trim().length < 2) {
-      alert('Por favor, ingresa tu nombre');
+      await showAlert('Aviso', 'Por favor, ingresa tu nombre para continuar.');
       return;
     }
 
@@ -39,7 +41,7 @@ const Home = () => {
         <button className="btn-primary" onClick={handleNext}>Siguiente</button>
       </div>
 
-      <Link to="/registro" className="link-gold">SerClientePuntos</Link>
+      <Link to="/login" className="link-gold">Ingresar / Registrarse</Link>
     </div>
   );
 };

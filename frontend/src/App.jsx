@@ -7,16 +7,18 @@ import { AuthProvider } from './context/AuthContext';
 import Background from './components/Background';
 import BackButton from './components/BackButton';
 import GlobalModal from './components/GlobalModal';
+import NavBar from './components/NavBar';
 
 // Pages Placeholder
 import Home from './pages/Home';
+import MisReservas from './pages/MisReservas';
 import Servicio from './pages/Servicio';
 import ServicioDetalle from './pages/ServicioDetalle';
 import Dia from './pages/Dia';
 import Hora from './pages/Hora';
 import Exito from './pages/Exito';
-import Registro from './pages/Registro';
-import Admin from './pages/Admin';
+import Login from './pages/Login';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
           <Router>
             <Background />
             <BackButton />
+            <NavBar />
             <GlobalModal />
             <div className="app-container">
               <Routes>
@@ -35,8 +38,9 @@ function App() {
                 <Route path="/dia" element={<Dia />} />
                 <Route path="/hora" element={<Hora />} />
                 <Route path="/exito" element={<Exito />} />
-                <Route path="/registro" element={<Registro />} />
-                <Route path="/admin" element={<Admin />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/mis-reservas" element={<MisReservas />} />
+                <Route path="/admin" element={<AdminDashboard />} />
               </Routes>
             </div>
           </Router>

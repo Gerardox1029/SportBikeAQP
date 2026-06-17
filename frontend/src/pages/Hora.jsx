@@ -1,9 +1,11 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReservationContext } from '../context/ReservationContext';
+import { useModal } from '../context/ModalContext';
 
 const Hora = () => {
   const { reservationData, updateData } = useContext(ReservationContext);
+  const { showAlert } = useModal();
   const navigate = useNavigate();
   const [selectedTime, setSelectedTime] = useState(null); // { h: number, m: number, str: string }
   const [reservations, setReservations] = useState([]);
@@ -109,7 +111,7 @@ const Hora = () => {
 
   const handleFinalize = async () => {
     if (!selectedTime) {
-      alert("Selecciona una hora.");
+      await showAlert('Aviso', "Selecciona una hora.");
       return;
     }
 
@@ -142,11 +144,11 @@ const Hora = () => {
         navigate('/exito');
       } else {
         const err = await res.json();
-        alert(err.error || "Error al crear la reserva");
+        await showAlert('Error', err.error || "Error al crear la reserva");
       }
     } catch (e) {
       console.error(e);
-      alert("Error de red.");
+      await showAlert('Error', "Error de red.");
     }
   };
 
