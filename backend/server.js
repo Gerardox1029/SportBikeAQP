@@ -4,6 +4,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
+const whatsappRoutes = require('./routes/whatsappRoutes');
+const { initWhatsApp } = require('./services/whatsappBot');
+const { initCronJobs } = require('./services/cronJobs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,7 +16,24 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' })); // Permite CORS
 app.use(express.json()); // Parsea JSON en el body
 
+// Initialize WhatsApp Bot
+let whatsappBot;
+try {
+  whatsappBot = {
+    sendMessage: require('./services/whatsappBot').sendMessage,
+    isReady: require('./services/whatsappBot').isReady
+  };
+  initWhatsApp();
+} catch (error) {
+  console.error('[System] Error al inicializar WhatsApp bot:', error);
+}
+
+// Initialize Cron Jobs
+initCronJobs(whatsappBot);
+
 // Rutas
+app.use('/api/auth', authRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api', apiRoutes);
 
 // Servir frontend estático
