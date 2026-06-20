@@ -7,6 +7,7 @@ const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const { initWhatsApp } = require('./services/whatsappBot');
+const { initCronJobs } = require('./services/cronJobs');
 
 // Build Trigger: Deploying JWT & WhatsApp authentication modules
 const app = express();
