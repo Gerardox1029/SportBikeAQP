@@ -95,7 +95,7 @@ const Login = () => {
       }
 
       // Guardar token y actualizar contexto
-      login(data.user, data.token);
+      login(data.token, data.user);
       await showAlert('¡Éxito!', 'Sesión iniciada correctamente.');
       navigate('/'); // Redirigir al inicio o mis reservas
     } catch (error) {
