@@ -69,6 +69,18 @@ router.put('/users/:id/points', async (req, res) => {
       user.puntos = 0;
     } else if (action === 'add') {
       user.puntos += amount;
+      
+      // Send WhatsApp notification
+      if (user.telefono) {
+        try {
+          const { sendMessage, isReady } = require('../services/whatsappBot');
+          if (isReady()) {
+            await sendMessage(user.telefono, `🎉 ¡Excelente! Se le bonificaron *+${amount} puntos*.\n\n🏆 Total acumulados: *${user.puntos} puntos*.\n\nSigue acumulando para obtener grandes descuentos en SportBikeAQP 🚴.`);
+          }
+        } catch (waError) {
+          console.error('[Points] Error enviando notificación de puntos:', waError.message);
+        }
+      }
     }
     
     await user.save();
@@ -86,6 +98,27 @@ router.delete('/users/:id', async (req, res) => {
     res.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error eliminando usuario.' });
+  }
+});
+
+// Add history to user
+router.post('/users/:id/historial', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, nota } = req.body;
+    
+    if (!fecha || !nota) return res.status(400).json({ error: 'Fecha y nota son requeridas.' });
+    
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    
+    user.historial = user.historial || [];
+    user.historial.push({ fecha, nota });
+    
+    await user.save();
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Error agregando al historial.' });
   }
 });
 

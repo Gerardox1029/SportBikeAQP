@@ -1,6 +1,7 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReservationContext } from '../context/ReservationContext';
+import { AuthContext } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 
 const Hora = () => {
@@ -109,28 +110,94 @@ const Hora = () => {
     calculateTimeFromAngle(e);
   };
 
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useContext(AuthContext);
+
   const handleFinalize = async () => {
     if (!selectedTime) {
       await showAlert('Aviso', "Selecciona una hora.");
       return;
     }
-
-    // Calcular hora de fin
-    const startDate = new Date();
-    startDate.setHours(selectedTime.h, selectedTime.m, 0, 0);
-    const endDate = new Date(startDate.getTime() + reservationData.duracion_minutos * 60000);
     
-    const hora_inicio_str = selectedTime.str;
-    const hora_fin_str = formatAMPM(endDate.getHours(), endDate.getMinutes());
+    // If user is not logged in, ask for OTP via WhatsApp
+    if (!reservationData.telefono) {
+      // Fallback if somehow they skipped home
+      await showAlert('Aviso', "Faltan datos del cliente. Vuelve al inicio.");
+      navigate('/');
+      return;
+    }
 
-    updateData({ hora_inicio: hora_inicio_str, hora_fin: hora_fin_str });
-
-    // Guardar en backend
+    setIsLoading(true);
     try {
+      // Send OTP code
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          telefono: reservationData.telefono,
+          codigoPais: '+51',
+          nombres: reservationData.nombres,
+          apellidos: reservationData.apellidos,
+          dni: reservationData.dni
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        setShowOTP(true);
+      } else {
+        await showAlert('Error', data.error || "No se pudo enviar el código");
+      }
+    } catch (e) {
+      await showAlert('Error', "Error de red al enviar código");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTPAndReserve = async () => {
+    if (otpCode.length < 6) return;
+    
+    setIsLoading(true);
+    try {
+      // 1. Verify OTP
+      const verifyRes = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          telefono: reservationData.telefono,
+          codigoPais: '+51',
+          codigo: otpCode
+        })
+      });
+      
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        await showAlert('Error', verifyData.error || "Código incorrecto");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Update Auth context
+      login(verifyData.token, verifyData.user);
+      
+      // 2. Create Reservation
+      const startDate = new Date();
+      startDate.setHours(selectedTime.h, selectedTime.m, 0, 0);
+      const endDate = new Date(startDate.getTime() + reservationData.duracion_minutos * 60000);
+      
+      const hora_inicio_str = selectedTime.str;
+      const hora_fin_str = formatAMPM(endDate.getHours(), endDate.getMinutes());
+
+      updateData({ hora_inicio: hora_inicio_str, hora_fin: hora_fin_str });
+
       const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id_usuario: verifyData.user._id,
           nombre_temporal: reservationData.nombre_temporal,
           servicio: reservationData.servicio,
           fecha: reservationData.fecha,
@@ -149,6 +216,9 @@ const Hora = () => {
     } catch (e) {
       console.error(e);
       await showAlert('Error', "Error de red.");
+    } finally {
+      setIsLoading(false);
+      setShowOTP(false);
     }
   };
 
@@ -253,7 +323,45 @@ const Hora = () => {
       </div>
 
       <div className="mt-2" style={{ width: '100%', maxWidth: '320px', marginTop: '90px' }}>
-         <button className="btn-primary" onClick={handleFinalize}>Finalizar reserva</button>
+         {showOTP ? (
+           <div style={{ background: 'var(--surface)', padding: '15px', borderRadius: '10px', textAlign: 'center' }}>
+             <h3 style={{ color: 'var(--primary-gold)', marginBottom: '10px' }}>Validar WhatsApp</h3>
+             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+               Ingresa el código de 6 dígitos enviado a tu WhatsApp.
+             </p>
+             <input 
+               type="text" 
+               className="input-field" 
+               placeholder="123456" 
+               maxLength="6"
+               value={otpCode}
+               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+               style={{ textAlign: 'center', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px' }}
+             />
+             <button 
+               className="btn-primary" 
+               onClick={handleVerifyOTPAndReserve}
+               disabled={isLoading || otpCode.length < 6}
+             >
+               {isLoading ? 'Verificando...' : 'Confirmar Reserva'}
+             </button>
+             <button 
+               className="btn-secondary" 
+               onClick={() => setShowOTP(false)}
+               style={{ marginTop: '10px', width: '100%' }}
+             >
+               Cancelar
+             </button>
+           </div>
+         ) : (
+           <button 
+             className="btn-primary" 
+             onClick={handleFinalize}
+             disabled={isLoading}
+           >
+             {isLoading ? 'Procesando...' : 'Finalizar reserva'}
+           </button>
+         )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ const { authMiddleware, JWT_SECRET } = require('../middleware/authMiddleware');
 // POST /api/auth/send-code — Generate and save verification code
 router.post('/send-code', async (req, res) => {
   try {
-    const { telefono, codigoPais } = req.body;
+    const { telefono, codigoPais, nombres, apellidos, dni } = req.body;
     if (!telefono || telefono.length < 9) {
       return res.status(400).json({ error: 'Número de teléfono inválido' });
     }
@@ -21,17 +21,22 @@ router.post('/send-code', async (req, res) => {
     // Find or create user by phone
     let user = await User.findOne({ telefono: fullPhone });
     if (!user) {
-      // Create new user with phone (minimal registration)
+      // Create new user with full registration data + 10 welcome points
       user = new User({
-        dni: `TEL-${telefono.slice(-8)}`,
-        nombre: 'Usuario',
+        dni: dni || `TEL-${telefono.slice(-8)}`,
+        nombre: nombres || 'Usuario',
+        apellidos: apellidos || '',
         telefono: fullPhone,
         codigoPais: codigoPais || '+51',
         codigoVerificacion: codigo,
-        puntos: 0
+        puntos: 10
       });
     } else {
       user.codigoVerificacion = codigo;
+      // Update name/apellidos if provided
+      if (nombres) user.nombre = nombres;
+      if (apellidos) user.apellidos = apellidos;
+      if (dni) user.dni = dni;
     }
     
     await user.save();
@@ -57,6 +62,28 @@ router.post('/send-code', async (req, res) => {
   } catch (error) {
     console.error('[Auth] Error sending code:', error);
     res.status(500).json({ error: 'Error enviando código de verificación' });
+  }
+});
+
+// POST /api/auth/admin-login — Login for Administrator
+router.post('/admin-login', async (req, res) => {
+  try {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    
+    if (password === adminPassword) {
+      const token = jwt.sign(
+        { role: 'admin' },
+        JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+      res.json({ token, user: { role: 'admin', nombre: 'Administrador' } });
+    } else {
+      res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+  } catch (error) {
+    console.error('[Auth] Error admin login:', error);
+    res.status(500).json({ error: 'Error en login de administrador' });
   }
 });
 

@@ -1,85 +1,115 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const pino = require('pino');
 const qrcode = require('qrcode');
+const qrcodeTerminal = require('qrcode-terminal');
+const path = require('path');
 
-let client = null;
+const AUTH_DIR = path.join(__dirname, '../../auth_info');
+const TIMEOUT_CONEXION_MS = 120000;
+
+const logger = pino({ level: 'warn' });
+
+let sock = null;
 let currentQR = null;
 let ready = false;
+let resolversConexion = [];
 
-const initWhatsApp = () => {
-  client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
-    puppeteer: {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--disable-gpu'
-      ]
-    }
-  });
+const initWhatsApp = async () => {
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { version } = await fetchLatestBaileysVersion();
 
-  client.on('qr', async (qr) => {
-    currentQR = await qrcode.toDataURL(qr);
-    console.log('[WhatsApp] QR Code generado. Escanéalo desde el panel admin.');
-    
-    // Also print QR in terminal for convenience
-    try {
-      const qrcodeTerminal = require('qrcode-terminal');
-      qrcodeTerminal.generate(qr, { small: true });
-    } catch (e) {
-      // qrcode-terminal not installed, skip
-    }
-  });
+    sock = makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger),
+      },
+      logger,
+      printQRInTerminal: false,
+      generateHighQualityLinkPreview: false,
+      getMessage: async () => ({ conversation: '' }),
+    });
 
-  client.on('ready', () => {
-    ready = true;
-    currentQR = null;
-    console.log('[WhatsApp] ✅ Bot conectado exitosamente!');
-  });
+    sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+      if (qr) {
+        currentQR = await qrcode.toDataURL(qr);
+        console.log('\n[WhatsApp] Escanea el QR para vincular tu cuenta:\n');
+        qrcodeTerminal.generate(qr, { small: true });
+      }
 
-  client.on('authenticated', () => {
-    console.log('[WhatsApp] Autenticado correctamente');
-  });
+      if (connection === 'open') {
+        console.log('[WhatsApp] ✓ Conexión establecida correctamente.');
+        ready = true;
+        currentQR = null;
+        resolversConexion.forEach(({ resolve }) => resolve());
+        resolversConexion = [];
+      }
 
-  client.on('auth_failure', (msg) => {
-    ready = false;
-    console.error('[WhatsApp] ❌ Error de autenticación:', msg);
-  });
+      if (connection === 'close') {
+        ready = false;
+        currentQR = null;
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const debeReconectar = statusCode !== DisconnectReason.loggedOut;
 
-  client.on('disconnected', (reason) => {
-    ready = false;
-    currentQR = null;
-    console.log('[WhatsApp] Desconectado:', reason);
-    // Try to reconnect after 5 seconds
-    setTimeout(() => {
-      console.log('[WhatsApp] Intentando reconectar...');
-      client.initialize().catch(console.error);
-    }, 5000);
-  });
+        console.log(
+          `[WhatsApp] Conexión cerrada. Código: ${statusCode ?? 'desconocido'}. ` +
+          `Reconectar: ${debeReconectar}`
+        );
 
-  client.initialize().catch((err) => {
-    console.error('[WhatsApp] Error inicializando:', err.message);
-    console.log('[WhatsApp] El bot de WhatsApp no está disponible. La app seguirá funcionando sin él.');
-  });
+        resolversConexion.forEach(({ reject }) =>
+          reject(new Error(`Conexión cerrada con código ${statusCode}`))
+        );
+        resolversConexion = [];
 
-  return client;
+        if (debeReconectar) {
+          console.log('[WhatsApp] Reconectando en 5 segundos...');
+          setTimeout(initWhatsApp, 5000);
+        } else {
+          console.error(
+            '[WhatsApp] ✗ Sesión cerrada permanentemente. ' +
+            'Elimina la carpeta auth_info/ y reinicia el servicio para vincular de nuevo.'
+          );
+        }
+      }
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+  } catch (error) {
+    console.error('[WhatsApp] Error inicializando:', error.message);
+  }
 };
 
+function esperarConexion() {
+  if (ready) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Timeout: WhatsApp no conectó en el tiempo esperado.'));
+    }, TIMEOUT_CONEXION_MS);
+
+    resolversConexion.push({
+      resolve: () => { clearTimeout(timer); resolve(); },
+      reject: (err) => { clearTimeout(timer); reject(err); },
+    });
+  });
+}
+
 const sendMessage = async (phone, message) => {
-  if (!client || !ready) {
+  await esperarConexion();
+
+  if (!sock || !ready) {
     throw new Error('WhatsApp client not ready');
   }
   
-  // Format phone number: remove + and add @c.us
-  const chatId = phone.replace('+', '') + '@c.us';
+  // Format phone number: remove +, spaces, dashes, parens
+  const numeroLimpio = phone.replace(/[\s\-\+\(\)]/g, '');
+  const jid = `${numeroLimpio}@s.whatsapp.net`;
   
   try {
-    await client.sendMessage(chatId, message);
+    const resultado = await sock.sendMessage(jid, { text: message });
     console.log(`[WhatsApp] Mensaje enviado a ${phone}`);
-    return true;
+    return resultado;
   } catch (error) {
     console.error(`[WhatsApp] Error enviando mensaje a ${phone}:`, error.message);
     throw error;
@@ -88,6 +118,6 @@ const sendMessage = async (phone, message) => {
 
 const getQR = () => currentQR;
 const isReady = () => ready;
-const getClient = () => client;
+const getClient = () => sock;
 
-module.exports = { initWhatsApp, sendMessage, getQR, isReady, getClient };
+module.exports = { initWhatsApp, sendMessage, getQR, isReady, getClient, esperarConexion };

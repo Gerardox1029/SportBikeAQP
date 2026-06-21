@@ -126,17 +126,23 @@ const AdminAgenda = () => {
 
   // Find reservations that overlap with a slot
   const getReservationsForSlot = (slot) => {
+    const parseTime = (timeStr) => {
+      if (!timeStr) return 0;
+      const [time, modifier] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':');
+      if (hours === '12') hours = '00';
+      if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+      return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+    };
+
+    const slotMins = parseInt(slot.split(':')[0], 10) * 60 + parseInt(slot.split(':')[1], 10);
+
     return reservations.filter(res => {
-      // res.hora_inicio (e.g. "09:00")
-      // Check if slot falls between hora_inicio and hora_fin
-      const slotTime = new Date(`1970-01-01T${slot}:00`);
-      const resStart = new Date(`1970-01-01T${res.hora_inicio}:00`);
+      const resStartMins = parseTime(res.hora_inicio);
+      const resEndMins = resStartMins + res.duracion_minutos;
       
-      // Calculate end time
-      const resEnd = new Date(resStart.getTime() + res.duracion_minutos * 60000);
-      
-      // Slot must be >= start and < end
-      return slotTime >= resStart && slotTime < resEnd;
+      // Check if slot is exactly the start time or falls within
+      return slotMins >= resStartMins && slotMins < resEndMins;
     });
   };
 

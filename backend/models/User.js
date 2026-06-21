@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  apellidos: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   telefono: {
     type: String,
     trim: true,
@@ -33,6 +38,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  historial: [{
+    fecha: { type: String },
+    nota: { type: String }
+  }],
   fechaRegistro: {
     type: Date,
     default: Date.now

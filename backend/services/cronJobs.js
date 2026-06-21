@@ -3,9 +3,9 @@ const Reservation = require('../models/Reservation');
 const User = require('../models/User');
 
 const initCronJobs = (whatsappBot) => {
-  // Daily reminder at 6:00 AM Peru time (UTC-5 = 11:00 UTC)
-  cron.schedule('0 11 * * *', async () => {
-    console.log('[Cron] Ejecutando recordatorio diario de reservas (6:00 AM Perú)...');
+  // Daily reminder at 7:00 AM Peru time (UTC-5 = 12:00 UTC)
+  cron.schedule('0 12 * * *', async () => {
+    console.log('[Cron] Ejecutando recordatorio diario de reservas (7:00 AM Perú)...');
     
     try {
       const today = new Date();
@@ -73,7 +73,7 @@ const initCronJobs = (whatsappBot) => {
     timezone: 'America/Lima'
   });
 
-  console.log('[Cron] ⏰ Job programado: Recordatorio diario a las 6:00 AM (Perú)');
+  console.log('[Cron] ⏰ Job programado: Recordatorio diario a las 7:00 AM (Perú)');
 };
 
 module.exports = { initCronJobs };
