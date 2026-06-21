@@ -34,6 +34,19 @@ const AdminWhatsApp = () => {
     await showAlert('Aviso', 'Funcionalidad de prueba pronto...');
   };
 
+  const handleDisconnect = async () => {
+    const confirmed = await showConfirm('Desvincular WhatsApp', '¿Estás seguro de que deseas desvincular el bot? Dejará de enviar notificaciones.');
+    if (!confirmed) return;
+    try {
+      await fetch('/api/whatsapp/disconnect', { method: 'POST' });
+      checkStatus();
+      showAlert('Desvinculado', 'El bot de WhatsApp ha sido desvinculado.');
+    } catch (e) {
+      console.error(e);
+      showAlert('Error', 'No se pudo desvincular.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-col-center">
@@ -78,7 +91,10 @@ const AdminWhatsApp = () => {
               </div>
               <h3 style={{ marginBottom: '10px' }}>¡WhatsApp Vinculado Exitosamente!</h3>
               <p style={{ color: 'var(--text-muted)' }}>El bot está activo y enviará notificaciones automáticas.</p>
-              <button className="btn-primary mt-2" onClick={handleTestMessage}>Probar Mensaje</button>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
+                <button className="btn-primary" onClick={handleTestMessage}>Probar Mensaje</button>
+                <button className="btn-cancel-res" style={{ padding: '10px 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleDisconnect}>Desvincular</button>
+              </div>
             </div>
           ) : (
             <div className="wa-instructions">

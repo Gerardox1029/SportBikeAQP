@@ -120,4 +120,17 @@ const getQR = () => currentQR;
 const isReady = () => ready;
 const getClient = () => sock;
 
-module.exports = { initWhatsApp, sendMessage, getQR, isReady, getClient, esperarConexion };
+const logoutWhatsApp = async () => {
+  if (sock) {
+    try {
+      await sock.logout();
+    } catch(e) {
+      console.error('[WhatsApp] Error logging out:', e.message);
+    }
+    sock = null;
+    ready = false;
+    currentQR = null;
+  }
+};
+
+module.exports = { initWhatsApp, sendMessage, getQR, isReady, getClient, esperarConexion, logoutWhatsApp };

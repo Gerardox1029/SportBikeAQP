@@ -5,6 +5,7 @@ import { useModal } from '../context/ModalContext';
 
 const ServicioDetalle = () => {
   const [detalle, setDetalle] = useState('');
+  const [interimText, setInterimText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const { updateData } = useContext(ReservationContext);
   const { showAlert } = useModal();
@@ -35,6 +36,7 @@ const ServicioDetalle = () => {
         if (finalTranscript) {
           setDetalle((prev) => prev + finalTranscript);
         }
+        setInterimText(interimTranscript);
       };
 
       recognitionRef.current.onerror = (event) => {
@@ -91,8 +93,11 @@ const ServicioDetalle = () => {
           className="input-field" 
           style={{ height: '140px', resize: 'none', marginBottom: 0 }}
           placeholder="¿Qué busca y por cuánto tiempo cree que es necesario? (Ej. Instalación de luces LED...)"
-          value={detalle}
-          onChange={(e) => setDetalle(e.target.value)}
+          value={detalle + interimText}
+          onChange={(e) => {
+            setDetalle(e.target.value);
+            setInterimText('');
+          }}
         ></textarea>
         
         <button 

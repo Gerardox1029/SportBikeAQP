@@ -46,8 +46,8 @@ router.post('/broadcast', async (req, res) => {
           } catch (e) {
             console.error(`[Broadcast] Error enviando a ${user.telefono}:`, e.message);
           }
-          // 3 second delay to prevent bans
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // 15 second delay to prevent bans
+          await new Promise(resolve => setTimeout(resolve, 15000));
         }
       }
       console.log(`[Broadcast] Finalizado.`);
@@ -57,6 +57,18 @@ router.post('/broadcast', async (req, res) => {
   } catch (error) {
     console.error('[WhatsApp] Broadcast error:', error);
     res.status(500).json({ error: 'Error iniciando broadcast' });
+  }
+});
+
+// POST /api/whatsapp/disconnect
+router.post('/disconnect', async (req, res) => {
+  try {
+    const { logoutWhatsApp } = require('../services/whatsappBot');
+    await logoutWhatsApp();
+    res.json({ message: 'WhatsApp desvinculado correctamente' });
+  } catch (error) {
+    console.error('[WhatsApp] Disconnect error:', error);
+    res.status(500).json({ error: 'Error al desvincular WhatsApp' });
   }
 });
 

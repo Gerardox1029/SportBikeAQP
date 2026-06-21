@@ -8,7 +8,7 @@ const AdminPuntos = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [newNote, setNewNote] = useState('');
-  
+
   const { showConfirm, showAlert } = useModal();
 
   const fetchUsers = async () => {
@@ -31,7 +31,7 @@ const AdminPuntos = () => {
 
   const handleAction = async (user, type) => {
     if (type === 'use') {
-      const confirmed = await showConfirm('Usar Puntos', `¿Usar todos los puntos (S/. ${user.puntos.toFixed(2)}) de ${user.nombre}?`);
+      const confirmed = await showConfirm('Usar Puntos', `¿Usar todos los puntos (S/. ${(user.puntos * 0.002).toFixed(2)}) de ${user.nombre}?`);
       if (confirmed) {
         try {
           const res = await fetch(`/api/users/${user._id}/points`, {
@@ -127,10 +127,10 @@ const AdminPuntos = () => {
       </div>
 
       <div className="puntos-search">
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="Buscar por DNI o Nombre..." 
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Buscar por DNI o Nombre..."
           value={searchDni}
           onChange={(e) => setSearchDni(e.target.value)}
         />
@@ -171,7 +171,7 @@ const AdminPuntos = () => {
 
       {/* Drawer Overlay */}
       <div className={`drawer-overlay ${isDrawerOpen ? 'active' : ''}`} onClick={closeDrawer}></div>
-      
+
       {/* Drawer Panel */}
       <div className={`drawer-panel ${isDrawerOpen ? 'active' : ''}`}>
         {selectedUser && (
@@ -188,13 +188,13 @@ const AdminPuntos = () => {
                 </svg>
               </button>
             </div>
-            
+
             <div className="drawer-body">
               <div style={{ marginBottom: '24px' }}>
-                <textarea 
-                  className="input-field" 
+                <textarea
+                  className="input-field"
                   style={{ height: '100px', resize: 'none', background: 'rgba(255,255,255,0.02)' }}
-                  placeholder="Añadir nueva nota médica/mecánica (ej. Cambio de frenos traseros, usa Shimano XT)..."
+                  placeholder="Escribe aquí... (ejemplo. Cambio de llantas, cambio de pastillas, etc.)"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                 ></textarea>
@@ -213,7 +213,7 @@ const AdminPuntos = () => {
                     <div key={item._id} className="timeline-item animate-fade-in">
                       <div className="timeline-dot"></div>
                       <div className="timeline-date">{new Date(item.fecha).toLocaleString()}</div>
-                      <div className="timeline-notes">{item.notas}</div>
+                      <div className="timeline-notes">{item.nota}</div>
                       <button className="timeline-delete" onClick={() => handleDeleteNote(item._id)}>
                         Eliminar
                       </button>
@@ -229,8 +229,8 @@ const AdminPuntos = () => {
       {addingPointsUser && (
         <>
           <div className="drawer-overlay active" onClick={() => setAddingPointsUser(null)}></div>
-          <div className="custom-modal-panel active" style={{ 
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+          <div className="custom-modal-panel active" style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             background: 'var(--surface)', padding: '20px', borderRadius: '12px', zIndex: 10001,
             width: '90%', maxWidth: '300px', textAlign: 'center'
           }}>
@@ -238,10 +238,10 @@ const AdminPuntos = () => {
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
               Ingrese los puntos a sumar para {addingPointsUser.nombre}. (Ej. 10)
             </p>
-            <input 
-              type="number" 
-              className="input-field" 
-              placeholder="Ej. 10" 
+            <input
+              type="number"
+              className="input-field"
+              placeholder="Ej. 10"
               value={pointsInput}
               onChange={(e) => setPointsInput(e.target.value)}
               style={{ textAlign: 'center', fontSize: '1.2rem', marginBottom: '15px' }}

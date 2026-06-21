@@ -231,18 +231,21 @@ const Hora = () => {
       const x = 140 + 90 * Math.cos(rad); // R=90
       const y = 140 + 90 * Math.sin(rad);
       
-      // Determinar si la hora está bloqueada
+      // Determinar si la hora está bloqueada o ocupada
       let h24 = i;
       if (i >= 1 && i <= 5) h24 += 12;
       
       const allowed = isTimeAllowed(h24, 0);
+      const occupied = isTimeOccupied(h24, 0);
+      const isAvailable = allowed && !occupied;
       
       numbers.push(
         <text 
           key={i} 
           x={x} 
           y={y + 5} 
-          fill={allowed ? "var(--text-main)" : "var(--surface-border)"} 
+          fill={isAvailable ? "var(--text-main)" : "var(--surface-border)"} 
+          opacity={occupied ? "0.3" : "1"}
           fontSize="14" 
           fontWeight="bold" 
           textAnchor="middle"
@@ -344,13 +347,6 @@ const Hora = () => {
                disabled={isLoading || otpCode.length < 6}
              >
                {isLoading ? 'Verificando...' : 'Confirmar Reserva'}
-             </button>
-             <button 
-               className="btn-secondary" 
-               onClick={() => setShowOTP(false)}
-               style={{ marginTop: '10px', width: '100%' }}
-             >
-               Cancelar
              </button>
            </div>
          ) : (

@@ -6,10 +6,11 @@ const AdminAgenda = () => {
   const [days, setDays] = useState([]);
   const [monthName, setMonthName] = useState('');
   const [agendaDate, setAgendaDate] = useState(new Date().toISOString().split('T')[0]);
-  
+
   const [reservationCounts, setReservationCounts] = useState({});
   const [blockedDays, setBlockedDays] = useState([]);
   const [reservations, setReservations] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { showConfirm, showAlert } = useModal();
 
   const fetchStatus = async () => {
@@ -29,11 +30,14 @@ const AdminAgenda = () => {
   };
 
   const fetchReservations = async (date) => {
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/reservations?fecha=${date}`);
       if (res.ok) setReservations(await res.json());
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,13 +49,13 @@ const AdminAgenda = () => {
   // Generar días de la semana
   useEffect(() => {
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     const dayOfWeek = today.getDay();
     const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    
+
     const monday = new Date(today);
     monday.setDate(diffToMonday + (currentWeekOffset * 7));
-    
+
     const weekDays = [];
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     let currentMonth = '';
@@ -64,10 +68,10 @@ const AdminAgenda = () => {
       const isPast = date < today;
       const isToday = date.getTime() === today.getTime();
       const fullDateStr = date.toISOString().split('T')[0];
-      
+
       const isBlocked = blockedDays.includes(fullDateStr);
       const resCount = reservationCounts[fullDateStr] || 0;
-      
+
       let statusClass = 'gray'; // past
       if (!isPast) {
         if (isBlocked || resCount >= 4) statusClass = 'red';
@@ -91,14 +95,14 @@ const AdminAgenda = () => {
       if (isBlocked) {
         await fetch(`/api/blocked-days/${agendaDate}`, { method: 'DELETE' });
       } else {
-        await fetch('/api/blocked-days', { 
-          method: 'POST', 
+        await fetch('/api/blocked-days', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fecha: agendaDate })
         });
       }
       fetchStatus();
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id) => {
@@ -108,13 +112,11 @@ const AdminAgenda = () => {
       await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
       fetchReservations(agendaDate);
       fetchStatus();
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   };
 
   const handleEdit = async (res) => {
-    // We would use a modal with inputs here or a drawer
-    // Para simplificar, abrimos una alerta informando que usarán el form
-    await showAlert("Editar", "Abre el detalle de la reserva (Pendiente de formulario completo)");
+    await showAlert("Detalle de Reserva", `Cliente: ${res.nombre_temporal}\nServicio: ${res.servicio}\nHorario: ${res.hora_inicio} - ${res.hora_fin}\nDuración: ${res.duracion_minutos} min`);
   };
 
   // Generar Time Grid: de 08:00 a 17:00 (intervalos de 30 min)
@@ -140,7 +142,7 @@ const AdminAgenda = () => {
     return reservations.filter(res => {
       const resStartMins = parseTime(res.hora_inicio);
       const resEndMins = resStartMins + res.duracion_minutos;
-      
+
       // Check if slot is exactly the start time or falls within
       return slotMins >= resStartMins && slotMins < resEndMins;
     });
@@ -161,57 +163,64 @@ const AdminAgenda = () => {
             <div className="time-grid-title">Grid de Horarios (8am - 5pm)</div>
           </div>
           <div className="time-grid-body">
-            {timeSlots.map((slot, index) => {
-              const activeRes = getReservationsForSlot(slot);
-              const isLunchBreak = slot === '13:00' || slot === '13:30';
+            {isLoading ? (
+              <div className="empty-state" style={{ padding: '40px 0' }}>
+                <div className="spinner" style={{ margin: '0 auto 15px' }}></div>
+                Cargando reservas...
+              </div>
+            ) : (
+              timeSlots.map((slot, index) => {
+                const activeRes = getReservationsForSlot(slot);
+                const isLunchBreak = slot === '13:00' || slot === '13:30';
 
-              return (
-                <div key={index} className={`time-row ${isLunchBreak ? 'lunch-break' : ''}`}>
-                  <div className="time-label">{slot}</div>
-                  <div className="time-slot">
-                    {isLunchBreak && activeRes.length === 0 && (
-                      <div className="time-slot-free" style={{ color: 'var(--text-muted)' }}>Horario de Almuerzo</div>
-                    )}
-                    {!isLunchBreak && activeRes.length === 0 && (
-                      <div className="time-slot-free">Disponible</div>
-                    )}
-                    {activeRes.map(res => (
-                      <div key={res._id} className="reservation-block" onClick={() => handleEdit(res)}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <div className="reservation-block-name">{res.nombre_temporal}</div>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleDelete(res._id); }} 
-                            style={{ background: 'transparent', border: 'none', color: 'var(--status-red)', cursor: 'pointer', padding: '0 4px' }}
-                          >
-                            ×
-                          </button>
+                return (
+                  <div key={index} className={`time-row ${isLunchBreak ? 'lunch-break' : ''}`}>
+                    <div className="time-label">{slot}</div>
+                    <div className="time-slot">
+                      {isLunchBreak && activeRes.length === 0 && (
+                        <div className="time-slot-free" style={{ color: 'var(--text-muted)' }}>Horario de Almuerzo</div>
+                      )}
+                      {!isLunchBreak && activeRes.length === 0 && (
+                        <div className="time-slot-free" style={{ color: 'var(--status-green)', fontWeight: 'bold', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '8px', padding: '4px 8px', width: 'fit-content', margin: 'auto' }}>Disponible</div>
+                      )}
+                      {activeRes.map(res => (
+                        <div key={res._id} className="reservation-block" onClick={() => handleEdit(res)}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div className="reservation-block-name">{res.nombre_temporal}</div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(res._id); }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--status-red)', cursor: 'pointer', padding: '0 4px' }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="reservation-block-service">{res.servicio}</div>
                         </div>
-                        <div className="reservation-block-service">{res.servicio}</div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
         <div className="agenda-side">
           <div className="agenda-card">
             <div className="week-header" style={{ marginBottom: '16px' }}>
-              <button 
-                onClick={() => { if(currentWeekOffset > 0) setCurrentWeekOffset(p => p - 1) }} 
+              <button
+                onClick={() => { if (currentWeekOffset > 0) setCurrentWeekOffset(p => p - 1) }}
                 disabled={currentWeekOffset === 0}
                 style={{ background: 'transparent', border: 'none', color: currentWeekOffset === 0 ? 'var(--surface-border)' : 'var(--primary-gold)', cursor: 'pointer', fontSize: '1.2rem' }}
               >&#9664;</button>
               <div style={{ fontWeight: '600' }}>{currentWeekOffset === 0 ? `Esta semana` : `Semana +${currentWeekOffset}`}</div>
-              <button 
-                onClick={() => { if(currentWeekOffset < 3) setCurrentWeekOffset(p => p + 1) }} 
+              <button
+                onClick={() => { if (currentWeekOffset < 3) setCurrentWeekOffset(p => p + 1) }}
                 disabled={currentWeekOffset === 3}
                 style={{ background: 'transparent', border: 'none', color: currentWeekOffset === 3 ? 'var(--surface-border)' : 'var(--primary-gold)', cursor: 'pointer', fontSize: '1.2rem' }}
               >&#9654;</button>
             </div>
-            
+
             <div style={{ textAlign: 'center', marginBottom: '10px', color: 'var(--primary-gold)', fontWeight: 'bold' }}>
               {monthName}
             </div>
@@ -220,13 +229,18 @@ const AdminAgenda = () => {
               {days.map((day, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div className="day-label">{day.label}</div>
-                  <div 
+                  <div
                     className={`day-circle ${day.statusClass} ${day.isSelected ? 'active' : ''} ${day.isPast ? 'disabled' : ''}`}
-                    onClick={() => { if(!day.isPast) setAgendaDate(day.fullDateStr) }}
-                    style={{ width: '36px', height: '36px', fontSize: '0.9rem' }}
+                    onClick={() => { if (!day.isPast) setAgendaDate(day.fullDateStr) }}
+                    style={{ width: '36px', height: '36px', fontSize: '0.9rem', position: 'relative' }}
                   >
                     {day.dayNum}
                     {day.isToday && <span className="tag-hoy" style={{ bottom: '-15px' }}>Hoy</span>}
+                    {(reservationCounts[day.fullDateStr] || 0) > 0 && !day.isPast && (
+                      <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--primary-gold)', color: '#000', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                        {reservationCounts[day.fullDateStr]}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -239,8 +253,8 @@ const AdminAgenda = () => {
               Fecha seleccionada: <strong>{agendaDate}</strong>
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 style={{ padding: '10px', fontSize: '0.9rem', background: blockedDays.includes(agendaDate) ? 'transparent' : 'var(--status-red)', border: blockedDays.includes(agendaDate) ? '1px solid var(--status-red)' : 'none', color: blockedDays.includes(agendaDate) ? 'var(--status-red)' : 'white' }}
                 onClick={toggleBlockedDay}
               >

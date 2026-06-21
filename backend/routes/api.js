@@ -153,6 +153,28 @@ router.post('/reservations', async (req, res) => {
     
     await newReservation.save();
     console.log(`[Reserva] Nueva reserva creada para ${nombre_temporal} el ${fecha} de ${hora_inicio} a ${hora_fin}`);
+    
+    // Add points and send message
+    if (id_usuario) {
+      const user = await User.findById(id_usuario);
+      if (user) {
+        user.puntos += 10;
+        await user.save();
+        
+        if (user.telefono) {
+          try {
+            const { sendMessage, isReady } = require('../services/whatsappBot');
+            if (isReady()) {
+              const msg = `✅ *¡Reserva Confirmada!*\n\nHola ${user.nombre},\nTu reserva para *${servicio}* ha sido programada con éxito.\n\n📅 *Fecha:* ${fecha}\n⏰ *Hora:* ${hora_inicio}\n📍 *Lugar:* Local SportBikeAQP\n\n🎉 _Bienvenido a SportBikeAQP, lo bonificamos con +10 puntos._`;
+              await sendMessage(user.telefono, msg);
+            }
+          } catch(e) {
+            console.error('[Reserva] Error enviando mensaje post-reserva:', e.message);
+          }
+        }
+      }
+    }
+
     res.status(201).json(newReservation);
   } catch (error) {
     res.status(500).json({ error: 'Error creando reserva.' });
