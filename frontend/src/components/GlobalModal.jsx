@@ -9,8 +9,14 @@ const GlobalModal = () => {
 
   useEffect(() => {
     if (modal) {
-      setPromptValue(modal.defaultValue || '');
-      setShowPassword(false); // Resetear visibilidad al abrir
+      // Si es un modal tipo 'password', inicializar vacío y oculto
+      if (modal.type === 'password') {
+        setPromptValue('');
+        setShowPassword(false);
+      } else {
+        setPromptValue(modal.defaultValue || '');
+        setShowPassword(false); // Resetear visibilidad al abrir
+      }
       requestAnimationFrame(() => setVisible(true));
     } else {
       setVisible(false);
@@ -50,6 +56,8 @@ const GlobalModal = () => {
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
               autoFocus
+              autoComplete={modal.type === 'password' ? 'current-password' : 'on'}
+              aria-label={modal.type === 'password' ? 'Contraseña de administrador' : 'Entrada'}
               style={{ width: '100%', paddingRight: '40px' }} // Espacio para el ojo
             />
             {modal.type === 'password' && (

@@ -33,9 +33,17 @@ export const ModalProvider = ({ children }) => {
     });
   }, []);
 
+  // Mostrar modal para ingresar contraseña (tipo 'password')
+  const showPasswordPrompt = useCallback((message, title = '') => {
+    return new Promise((resolve) => {
+      resolveRef.current = resolve;
+      setModal({ type: 'password', message, title, defaultValue: '' });
+    });
+  }, []);
+
   const handleAccept = useCallback((value) => {
     if (resolveRef.current) {
-      if (modal?.type === 'prompt') resolveRef.current(value);
+      if (modal?.type === 'prompt' || modal?.type === 'password') resolveRef.current(value);
       else if (modal?.type === 'confirm') resolveRef.current(true);
       else resolveRef.current(true);
     }
@@ -44,14 +52,14 @@ export const ModalProvider = ({ children }) => {
 
   const handleCancel = useCallback(() => {
     if (resolveRef.current) {
-      if (modal?.type === 'prompt') resolveRef.current(null);
+      if (modal?.type === 'prompt' || modal?.type === 'password') resolveRef.current(null);
       else resolveRef.current(false);
     }
     setModal(null);
   }, [modal]);
 
   return (
-    <ModalContext.Provider value={{ showAlert, showConfirm, showPrompt, modal, handleAccept, handleCancel }}>
+    <ModalContext.Provider value={{ showAlert, showConfirm, showPrompt, showPasswordPrompt, modal, handleAccept, handleCancel }}>
       {children}
     </ModalContext.Provider>
   );

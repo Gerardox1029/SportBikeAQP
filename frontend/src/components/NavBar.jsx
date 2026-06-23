@@ -6,7 +6,7 @@ import { useModal } from '../context/ModalContext';
 const NavBar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
   // Añade aquí la función que use tu contexto para abrir modales interactivos (ej: showPrompt o custom)
-  const { showAlert, showPrompt } = useModal();
+  const { showAlert, showPrompt, showPasswordPrompt } = useModal();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,24 +19,26 @@ const NavBar = () => {
   const handleAdminAccess = async () => {
     try {
       // 1. Invocar el modal personalizado tipo 'password'
-      // Ajusta 'showPrompt' según el nombre exacto de la función de tu ModalContext
-      const passwordIngresada = await showPrompt('Modo Administrador', 'Ingrese la contraseña de gestión:', 'password');
+      const passwordIngresada = await showPasswordPrompt('Ingrese la contraseña de gestión', 'Modo Administrador');
 
       if (!passwordIngresada) return; // Si cancela o está vacío, no hace nada
 
       // 2. Validar contra el backend de manera segura
-      const response = await fetch('/api/verify-admin-password', {
+      const response = await fetch('/api/auth/verify-admin-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordIngresada }),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/admin'); // Redirección sólo si el backend da luz verde
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) navigate('/admin');
+        else showAlert('Error de autenticación', data.message || 'Contraseña incorrecta.');
+      } else if (response.status === 401) {
+        const err = await response.json().catch(() => ({}));
+        showAlert('Error de autenticación', err.message || 'Contraseña incorrecta.');
       } else {
-        showAlert('Error de autenticación', data.message || 'Contraseña incorrecta.');
+        showAlert('Error', 'Hubo un problema con el servidor. Intente nuevamente.');
       }
     } catch (error) {
       console.error(error);
