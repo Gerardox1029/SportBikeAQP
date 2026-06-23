@@ -11,6 +11,41 @@ const AdminPuntos = () => {
 
   const { showConfirm, showAlert } = useModal();
 
+  // Formatea el número de WhatsApp para mostrar: intenta usar codigoPais + agrupación local (ej. 915 04 4212)
+  const formatWhatsApp = (user) => {
+    const raw = (user.telefono || '').trim();
+    const country = (user.codigoPais || '').trim();
+    if (!raw && !country) return '';
+
+    // Extraer solo dígitos
+    let digits = raw.replace(/\D/g, '');
+
+    // Si el telefono viene vacío pero hay country, devolver country
+    if (!digits && country) return country;
+
+    // Detectar código de país si viene en el mismo campo (ej. +51915044212)
+    let displayCountry = country;
+    let local = digits;
+    if (raw.startsWith('+')) {
+      const m = raw.match(/^\+(\d{1,3})(\d*)$/);
+      if (m) {
+        displayCountry = `+${m[1]}`;
+        local = m[2] || '';
+      }
+    }
+
+    // Formateo simple: si local tiene 9 dígitos -> 3-2-4
+    let formattedLocal = local;
+    if (local.length === 9) {
+      formattedLocal = `${local.slice(0,3)} ${local.slice(3,5)} ${local.slice(5)}`;
+    } else if (local.length > 0) {
+      // Agrupar en bloques de 3 como fallback
+      formattedLocal = local.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+    }
+
+    return `${displayCountry ? displayCountry + ' ' : ''}${formattedLocal}`.trim();
+  };
+
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/users');
@@ -152,7 +187,19 @@ const AdminPuntos = () => {
               </div>
               <div className="punto-info">
                 <div className="punto-dni">{user.dni}</div>
+                {/* Mostrar número de WhatsApp debajo del DNI si está disponible */}
+                {((user.telefono && user.telefono.trim() !== '') || (user.codigoPais && user.codigoPais.trim() !== '')) && (
+                  <div className="punto-wsp" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Wsp: {formatWhatsApp(user)}
+                  </div>
+                )}
+
                 <div className="punto-name" title={user.nombre}>{user.nombre}</div>
+                {/* Mostrar apellido debajo del nombre si existe */}
+                {user.apellidos && user.apellidos.trim() !== '' && (
+                  <div className="punto-lastname" style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{user.apellidos}</div>
+                )}
+
                 <div className="punto-date">Registro: {new Date(user.fechaRegistro).toLocaleDateString()}</div>
               </div>
               <div className="punto-score">
@@ -179,7 +226,14 @@ const AdminPuntos = () => {
             <div className="drawer-header">
               <div>
                 <div className="drawer-title">Historial Mecánico</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedUser.nombre} ({selectedUser.dni})</div>
+                <div style={{ fontSize: '0.95rem', color: '#fff', fontWeight: '600' }}>{selectedUser.nombre}</div>
+                {selectedUser.apellidos && (
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{selectedUser.apellidos}</div>
+                )}
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedUser.dni}</div>
+                {((selectedUser.telefono && selectedUser.telefono.trim() !== '') || (selectedUser.codigoPais && selectedUser.codigoPais.trim() !== '')) && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Wsp: {formatWhatsApp(selectedUser)}</div>
+                )}
               </div>
               <button className="drawer-close" onClick={closeDrawer}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
