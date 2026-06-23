@@ -28,13 +28,13 @@ router.post('/broadcast', async (req, res) => {
   try {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Mensaje requerido' });
-    
+
     if (!isReady()) return res.status(503).json({ error: 'WhatsApp no está conectado' });
-    
+
     const User = require('../models/User');
     const { sendMessage } = require('../services/whatsappBot');
     const users = await User.find({ telefono: { $exists: true, $ne: null } });
-    
+
     // Background broadcast task to prevent blocking the request
     (async () => {
       console.log(`[Broadcast] Iniciando envío a ${users.length} usuarios...`);
@@ -52,7 +52,7 @@ router.post('/broadcast', async (req, res) => {
       }
       console.log(`[Broadcast] Finalizado.`);
     })();
-    
+
     res.json({ message: `Broadcast iniciado para ${users.length} usuarios.` });
   } catch (error) {
     console.error('[WhatsApp] Broadcast error:', error);

@@ -17,16 +17,16 @@ const Home = () => {
       navigate('/admin');
       return;
     }
-    
+
     if (nombres.trim().length < 2 || apellidos.trim().length < 2 || dni.length < 8 || whatsapp.length < 9) {
       await showAlert('Aviso', 'Por favor, completa todos los campos correctamente.');
       return;
     }
 
-    updateData({ 
-      nombres, 
-      apellidos, 
-      dni, 
+    updateData({
+      nombres,
+      apellidos,
+      dni,
       telefono: whatsapp,
       nombre_temporal: `${nombres} ${apellidos}`
     });
@@ -35,28 +35,28 @@ const Home = () => {
 
   return (
     <div className="flex-col-center animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-      <h1>Realiza tu Reserva<br/>en 3 PASOS</h1>
+      <h1>Realiza tu Reserva<br />en 3 PASOS</h1>
       <div className="subtitle">SportBikeAQP</div>
-      
+
       <div className="mt-2" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="Nombres" 
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Nombres"
           value={nombres}
           onChange={(e) => setNombres(e.target.value)}
         />
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="Apellidos" 
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Apellidos"
           value={apellidos}
           onChange={(e) => setApellidos(e.target.value)}
         />
-        <input 
-          type="number" 
-          className="input-field" 
-          placeholder="DNI" 
+        <input
+          type="number"
+          className="input-field"
+          placeholder="DNI"
           value={dni}
           onChange={(e) => setDni(e.target.value)}
         />
@@ -65,10 +65,10 @@ const Home = () => {
             <option value="+51">+51</option>
             {/* Add more country codes if necessary */}
           </select>
-          <input 
-            type="number" 
-            className="input-field" 
-            placeholder="WhatsApp" 
+          <input
+            type="number"
+            className="input-field"
+            placeholder="WhatsApp"
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleNext()}

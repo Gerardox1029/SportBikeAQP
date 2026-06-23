@@ -5,7 +5,8 @@ import { useModal } from '../context/ModalContext';
 
 const NavBar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
-  const { showAlert } = useModal();
+  // Añade aquí la función que use tu contexto para abrir modales interactivos (ej: showPrompt o custom)
+  const { showAlert, showPrompt } = useModal();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,7 +16,34 @@ const NavBar = () => {
     navigate('/');
   };
 
-  // No mostrar navbar en admin
+  const handleAdminAccess = async () => {
+    try {
+      // 1. Invocar el modal personalizado tipo 'password'
+      // Ajusta 'showPrompt' según el nombre exacto de la función de tu ModalContext
+      const passwordIngresada = await showPrompt('Modo Administrador', 'Ingrese la contraseña de gestión:', 'password');
+
+      if (!passwordIngresada) return; // Si cancela o está vacío, no hace nada
+
+      // 2. Validar contra el backend de manera segura
+      const response = await fetch('/api/verify-admin-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordIngresada }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        navigate('/admin'); // Redirección sólo si el backend da luz verde
+      } else {
+        showAlert('Error de autenticación', data.message || 'Contraseña incorrecta.');
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert('Error', 'Hubo un problema al conectar con el servidor.');
+    }
+  };
+
   if (location.pathname.startsWith('/admin')) return null;
 
   return (
@@ -23,25 +51,19 @@ const NavBar = () => {
       <Link to="/" className="nav-brand" style={{ textDecoration: 'none' }}>
         SPORTBIKE<span style={{ color: 'var(--text-main)' }}>AQP</span>
       </Link>
-      
+
       <div className="nav-links">
-        <Link 
-          to="/" 
-          className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-        >
+        <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
           Inicio
         </Link>
-        
+
         {isAuthenticated ? (
           <>
-            <Link 
-              to="/mis-reservas" 
-              className={`nav-link ${location.pathname === '/mis-reservas' ? 'active' : ''}`}
-            >
+            <Link to="/mis-reservas" className={`nav-link ${location.pathname === '/mis-reservas' ? 'active' : ''}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -63,15 +85,17 @@ const NavBar = () => {
             </button>
           </>
         ) : (
-          <Link 
-            to="/admin" 
+          /* Cambiado de Link a button para controlar la lógica del modal */
+          <button
+            onClick={handleAdminAccess}
             className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+            style={{ background: 'none', border: 'none', font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             Admin
-          </Link>
+          </button>
         )}
       </div>
     </nav>

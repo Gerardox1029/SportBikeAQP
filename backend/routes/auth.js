@@ -14,7 +14,7 @@ router.post('/send-code', async (req, res) => {
     }
 
     const fullPhone = `${codigoPais || '+51'}${telefono}`;
-    
+
     // Generate 6-digit code
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -38,7 +38,7 @@ router.post('/send-code', async (req, res) => {
       if (apellidos) user.apellidos = apellidos;
       if (dni) user.dni = dni;
     }
-    
+
     await user.save();
 
     // Try to send code via WhatsApp if bot is available
@@ -54,8 +54,8 @@ router.post('/send-code', async (req, res) => {
       console.log(`[Auth] WhatsApp no disponible. Código para ${fullPhone}: ${codigo}`);
     }
 
-    res.json({ 
-      message: 'Código enviado', 
+    res.json({
+      message: 'Código enviado',
       // In development, return the code (remove in production!)
       ...(process.env.NODE_ENV !== 'production' && { debug_code: codigo })
     });
@@ -70,7 +70,7 @@ router.post('/admin-login', async (req, res) => {
   try {
     const { password } = req.body;
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    
+
     if (password === adminPassword) {
       const token = jwt.sign(
         { role: 'admin' },
@@ -142,6 +142,32 @@ router.post('/verify-code', async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+router.post('/verify-admin-password', (req, res) => {
+  const { password } = req.body;
+
+  // Verificación directa contra el .env del servidor
+  if (password === process.env.ADMIN_PASSWORD) {
+    return res.status(200).json({ success: true, message: 'Acceso concedido' });
+  }
+
+  return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+});
+
+
+
+
+
+
+
+
+
 // GET /api/auth/me — Get current user from JWT
 router.get('/me', authMiddleware, async (req, res) => {
   try {
@@ -155,11 +181,16 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+
+
+
+
+
 // GET /api/auth/my-reservations — Get reservations for logged-in user
 router.get('/my-reservations', authMiddleware, async (req, res) => {
   try {
-    const reservations = await Reservation.find({ 
-      id_usuario: req.user.userId 
+    const reservations = await Reservation.find({
+      id_usuario: req.user.userId
     }).sort({ fecha: -1, hora_inicio: -1 });
 
     // Also find by phone-based name match as fallback
