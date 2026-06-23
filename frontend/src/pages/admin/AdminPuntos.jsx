@@ -12,38 +12,16 @@ const AdminPuntos = () => {
   const { showConfirm, showAlert } = useModal();
 
   // Formatea el número de WhatsApp para mostrar: intenta usar codigoPais + agrupación local (ej. 915 04 4212)
+  // Mostrar solo dígitos locales, sin agrupación ni prefijo de país (ej. 915044212)
   const formatWhatsApp = (user) => {
     const raw = (user.telefono || '').trim();
-    const country = (user.codigoPais || '').trim();
-    if (!raw && !country) return '';
-
+    if (!raw) return '';
     // Extraer solo dígitos
     let digits = raw.replace(/\D/g, '');
-
-    // Si el telefono viene vacío pero hay country, devolver country
-    if (!digits && country) return country;
-
-    // Detectar código de país si viene en el mismo campo (ej. +51915044212)
-    let displayCountry = country;
-    let local = digits;
-    if (raw.startsWith('+')) {
-      const m = raw.match(/^\+(\d{1,3})(\d*)$/);
-      if (m) {
-        displayCountry = `+${m[1]}`;
-        local = m[2] || '';
-      }
-    }
-
-    // Formateo simple: si local tiene 9 dígitos -> 3-2-4
-    let formattedLocal = local;
-    if (local.length === 9) {
-      formattedLocal = `${local.slice(0,3)} ${local.slice(3,5)} ${local.slice(5)}`;
-    } else if (local.length > 0) {
-      // Agrupar en bloques de 3 como fallback
-      formattedLocal = local.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
-    }
-
-    return `${displayCountry ? displayCountry + ' ' : ''}${formattedLocal}`.trim();
+    if (!digits) return '';
+    // Si el número tiene más de 9 dígitos, tomar los últimos 9 (número local típico)
+    if (digits.length > 9) digits = digits.slice(-9);
+    return digits;
   };
 
   const fetchUsers = async () => {
