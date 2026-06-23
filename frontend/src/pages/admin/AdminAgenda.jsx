@@ -116,7 +116,13 @@ const AdminAgenda = () => {
   };
 
   const handleEdit = async (res) => {
-    await showAlert("Detalle de Reserva", `Cliente: ${res.nombre_temporal}\nServicio: ${res.servicio}\nHorario: ${res.hora_inicio} - ${res.hora_fin}\nDuración: ${res.duracion_minutos} min`);
+    await showAlert(
+      "Detalle de Reserva", 
+`Cliente: ${res.nombre_temporal}
+Servicio: ${res.servicio}
+Horario: ${res.hora_inicio} - ${res.hora_fin}
+Duración: ${res.duracion_minutos} min`
+    );
   };
 
   // Generar Time Grid: de 08:00 a 17:00 (intervalos de 30 min)
