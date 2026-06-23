@@ -230,27 +230,87 @@ const AdminPuntos = () => {
         <>
           <div className="drawer-overlay active" onClick={() => setAddingPointsUser(null)}></div>
           <div className="custom-modal-panel active" style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            background: 'var(--surface)', padding: '20px', borderRadius: '12px', zIndex: 10001,
-            width: '90%', maxWidth: '300px', textAlign: 'center'
-          }}>
-            <h3 style={{ color: 'var(--primary-gold)', marginBottom: '10px' }}>Añadir Puntos</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
-              Ingrese los puntos a sumar para {addingPointsUser.nombre}. (Ej. 10)
-            </p>
-            <input
-              type="number"
-              className="input-field"
-              placeholder="Ej. 10"
-              value={pointsInput}
-              onChange={(e) => setPointsInput(e.target.value)}
-              style={{ textAlign: 'center', fontSize: '1.2rem', marginBottom: '15px' }}
-            />
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-secondary" onClick={() => setAddingPointsUser(null)} style={{ flex: 1 }}>Cancelar</button>
-              <button className="btn-primary" onClick={confirmAddPoints} style={{ flex: 1 }}>Confirmar</button>
-            </div>
-          </div>
+  position: 'fixed', 
+  top: '50%', 
+  left: '50%', 
+  transform: 'translate(-50%, -50%)',
+  background: '#1a1a1a', /* Fondo negro sólido y elegante */
+  border: '1px solid #333', /* Borde sutil para darle profundidad */
+  boxShadow: '0 15px 35px rgba(0, 0, 0, 0.7)', /* Sombra para despegarlo del fondo */
+  padding: '25px 20px', 
+  borderRadius: '12px', 
+  zIndex: 10001,
+  width: '90%', 
+  maxWidth: '320px', 
+  textAlign: 'center'
+}}>
+  
+  <h3 style={{ color: 'var(--primary-gold)', margin: '0 0 10px 0', fontSize: '1.4rem' }}>
+    Añadir Puntos
+  </h3>
+  
+  <p style={{ fontSize: '0.9rem', color: '#a0a0a0', marginBottom: '20px', lineHeight: '1.4' }}>
+    Ingrese el valor de venta (S/.1 = 1 punto) para <strong style={{color: '#fff'}}>{addingPointsUser.nombre}</strong>.
+  </p>
+  
+  <input
+    type="number"
+    className="input-field"
+    placeholder="Ejemplo: 25"
+    value={pointsInput}
+    onChange={(e) => setPointsInput(e.target.value)}
+    style={{ 
+      textAlign: 'center', 
+      fontSize: '1.2rem', 
+      marginBottom: '20px',
+      width: '100%',
+      boxSizing: 'border-box',
+      background: '#2a2a2a', /* Input ligeramente más claro que el fondo */
+      color: '#fff',
+      border: '1px solid #444',
+      padding: '12px',
+      borderRadius: '8px',
+      outline: 'none'
+    }}
+  />
+  
+  <div style={{ display: 'flex', gap: '12px' }}>
+    <button 
+      /* Quitamos la clase genérica si queremos forzar el estilo, o la dejamos como base */
+      className="btn-secondary" 
+      onClick={() => setAddingPointsUser(null)} 
+      style={{ 
+        flex: 1, 
+        background: '#222', /* Botón opaco/negro */
+        color: '#ccc', 
+        border: '1px solid #444',
+        padding: '12px 0',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        fontSize: '0.95rem'
+      }}
+    >
+      Cancelar
+    </button>
+    
+    <button 
+      className="btn-primary" 
+      onClick={confirmAddPoints} 
+      style={{ 
+        flex: 1,
+        padding: '12px 0', /* Mismo padding que cancelar para que sean simétricos */
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        fontSize: '0.95rem',
+        border: 'none'
+      }}
+    >
+      Confirmar
+    </button>
+  </div>
+</div>
         </>
       )}
 
