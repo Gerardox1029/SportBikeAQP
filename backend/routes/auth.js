@@ -161,6 +161,30 @@ router.post('/verify-admin-password', (req, res) => {
 });
 
 
+// POST /api/auth/check-admin-name — Check if provided name is an admin (server-side)
+router.post('/check-admin-name', (req, res) => {
+  try {
+    const { nombres } = req.body;
+    if (!nombres || typeof nombres !== 'string') {
+      return res.status(400).json({ error: 'Campo "nombres" requerido' });
+    }
+
+    // ADMIN_USERNAMES expected as comma separated values in .env, e.g. "admin,timsum"
+    const raw = process.env.ADMIN_USERNAMES || '';
+    const admins = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+    if (admins.includes(nombres.toLowerCase())) {
+      return res.status(200).json({ isAdmin: true });
+    }
+
+    return res.status(401).json({ isAdmin: false });
+  } catch (err) {
+    console.error('[Auth] Error checking admin name:', err);
+    return res.status(500).json({ error: 'Error comprobando admin' });
+  }
+});
+
+
 
 
 

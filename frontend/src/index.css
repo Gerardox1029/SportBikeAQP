@@ -674,6 +674,7 @@ input[type=number] {
 
 .phone-input {
   flex: 1;
+  min-width: 0;
   background: var(--surface-color);
   border: 1px solid var(--surface-border);
   color: var(--text-main);

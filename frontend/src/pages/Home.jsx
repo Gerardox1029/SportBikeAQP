@@ -13,14 +13,36 @@ const Home = () => {
   const navigate = useNavigate();
 
   const handleNext = async () => {
-    if (nombres.toLowerCase() === 'timsum' || nombres.toLowerCase() === 'admin') {
-      navigate('/admin');
+    // Validate required fields before any server call
+    if (
+      nombres.trim().length < 2 ||
+      apellidos.trim().length < 2 ||
+      dni.length !== 8 ||
+      whatsapp.length < 9
+    ) {
+      await showAlert('Aviso', 'Por favor, completa todos los campos correctamente.');
       return;
     }
 
-    if (nombres.trim().length < 2 || apellidos.trim().length < 2 || dni.length < 8 || whatsapp.length < 9) {
-      await showAlert('Aviso', 'Por favor, completa todos los campos correctamente.');
-      return;
+    // Check server-side if this name corresponds to an admin (no secrets in frontend)
+    try {
+      const resp = await fetch('/api/auth/check-admin-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombres })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.isAdmin) {
+          navigate('/admin');
+          return;
+        }
+      }
+      // If not admin (401 or isAdmin false), continue normal flow
+    } catch (err) {
+      console.error('Error checking admin name', err);
+      // In case of server error, fall back to normal flow but do not expose secrets
     }
 
     updateData({
@@ -44,21 +66,33 @@ const Home = () => {
           className="input-field"
           placeholder="Nombres"
           value={nombres}
-          onChange={(e) => setNombres(e.target.value)}
+          maxLength={50}
+          onChange={(e) => {
+            const soloLetras = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '');
+            setNombres(soloLetras.slice(0, 50));
+          }}
         />
         <input
           type="text"
           className="input-field"
           placeholder="Apellidos"
           value={apellidos}
-          onChange={(e) => setApellidos(e.target.value)}
+          maxLength={50}
+          onChange={(e) => {
+            const soloLetras = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '');
+            setApellidos(soloLetras.slice(0, 50));
+          }}
         />
         <input
           type="number"
           className="input-field"
           placeholder="DNI"
           value={dni}
-          onChange={(e) => setDni(e.target.value)}
+          maxLength={8}
+          onChange={(e) => {
+            const soloNumeros = e.target.value.replace(/\D/g, '');
+            setDni(soloNumeros.slice(0, 8));
+          }}
         />
         <div style={{ display: 'flex', gap: '5px' }}>
           <select className="input-field" style={{ width: '80px', padding: '0 10px' }} defaultValue="+51">
@@ -66,13 +100,14 @@ const Home = () => {
             {/* Add more country codes if necessary */}
           </select>
           <input
-            type="number"
-            className="input-field"
+            type="tel"
+            className="input-field phone-input"
             placeholder="WhatsApp"
             value={whatsapp}
-            onChange={(e) => setWhatsapp(e.target.value)}
+            maxLength={15}
+            onChange={(e) => setWhatsapp(e.target.value.replace(/[^0-9]/g, ''))}
             onKeyDown={(e) => e.key === 'Enter' && handleNext()}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: '0', maxWidth: 'none' }}
           />
         </div>
         <button className="btn-primary mt-1" onClick={handleNext}>Siguiente</button>
