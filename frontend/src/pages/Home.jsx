@@ -94,20 +94,20 @@ const Home = () => {
             setDni(soloNumeros.slice(0, 8));
           }}
         />
-        <div style={{ display: 'flex', gap: '5px' }}>
-          <select className="input-field" style={{ width: '80px', padding: '0 10px' }} defaultValue="+51">
+        <div className="country-selector">
+          <select className="country-select" defaultValue="+51">
             <option value="+51">+51</option>
             {/* Add more country codes if necessary */}
           </select>
           <input
             type="tel"
-            className="input-field phone-input"
+            className="phone-input"
             placeholder="WhatsApp"
             value={whatsapp}
             maxLength={15}
             onChange={(e) => setWhatsapp(e.target.value.replace(/[^0-9]/g, ''))}
             onKeyDown={(e) => e.key === 'Enter' && handleNext()}
-            style={{ flex: 1, minWidth: '0', maxWidth: 'none' }}
+            aria-label="WhatsApp"
           />
         </div>
         <button className="btn-primary mt-1" onClick={handleNext}>Siguiente</button>
